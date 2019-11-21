@@ -1,0 +1,20 @@
+Data Format
+Stream:ProEyeGaze
+Type:Gaze
+Index - Data (index +=1 if it's loaded in matlab)
+0 - 2d coordinate of left eye
+2 - 2d coordinate of right eye
+4 - 3d direction of left eye
+7 - 3d direction of right eye
+10 - 3d position of combined hit spot
+13 - 3d position of head
+16 - 3d forward direction of head*
+19 - 3d velocity of head*
+22 - 3d angular velocity of head*
+25 - left eye openness*
+26 - right eye openness*
+27 - 3d position of chest IMU**
+30 - 3d forward direction of chest IMU**
+* Not available in "block_.xdf"
+** Not implemented yet
+
