@@ -229,7 +229,81 @@ function fix_struct = cal_fixation(streams,varargin)
         v_ang_fix_idx = v_ang/pi*180 < pipe_pars.thres_ang_v;
     end
     
-%%%
+    %% merge adjacent fixation
+    % angular based fixation
+    gap_floor = 1; % floor 
+    for f_i = 1:length(ang_fix_idx)
+        gap_ceiling = f_i; % ceiling
+        if ang_fix_idx(f_i) == 0
+            if ang_fix_idx(gap_floor) == 1
+                gap_floor = f_i;
+            end
+        else
+            if gap_ceiling - gap_floor < pipe_pars.max_fix_interval/1000*srate ...
+                && ang_fix_idx(gap_floor) == 0 ...
+                && abs(ang(gap_ceiling)-ang(gap_floor))/pi*180 < pipe_pars.max_fix_ang
+                % merge adjacent fixation
+                ang_fix_idx(gap_floor:gap_ceiling-1) = 1;
+            else
+                gap_floor = gap_ceiling;
+            end
+        end
+    end
+
+    % angular velocity based fixation
+    gap_floor = 1; % floor 
+    for f_i = 1:length(v_ang_fix_idx)
+        gap_ceiling = f_i; % ceiling
+        if v_ang_fix_idx(f_i) == 0
+            if v_ang_fix_idx(gap_floor) == 1
+                gap_floor = f_i;
+            end
+        else
+            if gap_ceiling - gap_floor < pipe_pars.max_fix_interval/1000*srate ...
+                && v_ang_fix_idx(gap_floor) == 0 ...
+                && abs(ang(gap_ceiling)-ang(gap_floor))/pi*180 < pipe_pars.max_fix_ang
+                % merge adjacent fixation
+                v_ang_fix_idx(gap_floor:gap_ceiling-1) = 1;
+            else
+                gap_floor = gap_ceiling;
+            end
+        end
+    end
+    %% remove fixation with short period
+    % angular based fixation
+    fix_floor = 1; % floor 
+    for f_i = 1:length(ang_fix_idx)
+        fix_ceiling = f_i; % ceiling
+        if ang_fix_idx(f_i) == 1
+            if ang_fix_idx(fix_floor) == 0
+                fix_floor = f_i;
+            end
+        else
+            if fix_ceiling - fix_floor < pipe_pars.min_fix_len/1000*srate && ang_fix_idx(fix_floor) == 1
+                % delete short fixation
+                ang_fix_idx(fix_floor:fix_ceiling-1) = 0;
+            else
+                fix_floor = fix_ceiling;
+            end
+        end
+    end
+    % angular velocity based fixation
+    fix_floor = 1; % floor 
+    for f_i = 1:length(v_ang_fix_idx)
+        fix_ceiling = f_i; % ceiling
+        if v_ang_fix_idx(f_i) == 1
+            if v_ang_fix_idx(fix_floor) == 0
+                fix_floor = f_i;
+            end
+        else
+            if fix_ceiling - fix_floor < pipe_pars.min_fix_len/1000*srate && v_ang_fix_idx(fix_floor) == 1
+                % delete short fixation
+                v_ang_fix_idx(fix_floor:fix_ceiling-1) = 0;
+            else
+                fix_floor = fix_ceiling;
+            end
+        end
+    end
     %% decide fixation index
     switch pipe_pars.fix_selection
         case 'velocity'
