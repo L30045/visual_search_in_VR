@@ -1,9 +1,54 @@
 %% calculate fixation for eye movement, GIP location, and head movement
-function gaze_struct = cal_fixation(streams,varargin)
+function fix_struct = cal_fixation(streams,varargin)
+%% calculate eye fixation based on puipl's angular velocity and eye openess.
+% Input:
+%   [s_eyeGaze]: eye gaze streams containing eye_3D_pos and eye_openess
+%       eye_3D_pos: puipl 3D location (xyz by time)
+%       eye_openess: eye openess (left, right by time) [0 1]
+%   [noise_reduction]: moving average puipl location with +/- n samples
+%   [max_gap_length]: max gap length to be filled in, otherwise treat as
+%   blink or losing data based on eye openess.(ms)
+%   [blink_length]: max length for gap to classify as blink, otherwise data
+%   lose. (ms)
+%   [thres_open]: label data as "gap (eye close)" when eye openess is smaller
+%   than this threshold. [0 1] (0: eye fully close, 1: eye fully open)
+%   [eye_selection]: calcualte velocity based on the position of selected
+%   eye. ('left','right','average')
+%   [velocity_smooth_win_len]: calculate angular velocity based on a
+%   sliding window, time point without enough samples to fill the window
+%   will not be calculated. ie. the beginning and end of a recording. (ms)
+%   [thres_ang]: angular higher than this threshold will be marked as
+%   saccade) (Default: 0.5 deg/s ref. Nystrom 2010.) (deg)
+%   [thres_ang_v]: angular velocity higher than this threshold will be marked
+%   as saccade) (Default: 30 deg/s ref. tobii, 130 deg/s ref. Eye tracking
+%   2017.) (deg/s)
+%   [fix_selection]: select fixation criteria. (function not complete, might
+%   include angular, accelecration criteria in the future. 20200521-Chi-Yuan)
+%   [max_fix_interval]: merge adjacent fixations if the interval is smaller
+%   than this threshold. (ms)
+%   [max_fix_ang]: merge adjacent fixations if the angle difference is
+%   smaller than this threshold) (0.5 deg ref. Tobii default) (deg)
+%   [min_fix_len]: discard fixations if shorter than this threshold. (60 ms
+%   ref. Tobii) (ms)
+%
+% Output:
+%   fix_struct: structure contains eye related information
+%       pipeline_pars: parameters setting
+%       time_stamps: time stamps in eye gaze stream
+%       srate: sampling rate
+%       gap_detection: type of gaps (blink or data lose)
+%       reconstruct_3D_pos: reconstructed position for eye, GIP, and head.
+%       eye_movement: puipl moving angle and angular velocity
+%       gip_movement: Distance between GIP and head, GIP moving distance,
+%       GIP moving velocity
+%       head_movement: head moving distance, head moving velocity, head
+%       rotate angle and angular velocity.
+%       fixation: fixation index for eye, GIP, and head.
+
     %% parameter setting
     p = inputParser;
     p.KeepUnmatched = true;
-    addRequired(p,'streams');
+    addRequired(p,'s_eyeGaze');
     addOptional(p,'max_gap_length',75) % ms (max gap length to be filled in, otherwise treat as blink or losing data based on eye openess.)
     addOptional(p,'blink_length',150) % ms (max length for gap to classify as blink, otherwise data lose.)
     addOptional(p,'thres_open',0.1) % label data as "gap (eye close)" when eye openess is smaller than this threshold
@@ -18,9 +63,9 @@ function gaze_struct = cal_fixation(streams,varargin)
     addOptional(p,'min_fix_len',150) % ms (discard fixations if shorter than 150ms. Tobii uses 60 ms istead)
     parse(p,streams,varargin{:})
     
-    % initialize gaze struct
+    % initialize fix struct
     pipe_pars = p.Results;
-    gaze_struct = struct('pipeline_pars',pipe_pars,'time_stamps',[],'srate',[],...
+    fix_struct = struct('pipeline_pars',pipe_pars,'time_stamps',[],'srate',[],...
                          'gap_detection',struct('eye_open_idx',[],'blink_idx',[],'dataLose_idx',[]),...
                          'reconstruct_3D_pos',struct('eye_pos',[],'gip_pos',[],'head_pos',[]),...
                          'eye_movement',struct('ang',[],'ang_vel',[]),...
@@ -28,23 +73,26 @@ function gaze_struct = cal_fixation(streams,varargin)
                          'head_movement',struct('mv_dist',[],'mv_vel',[],'ang',[],'ang_vel',[]),...
                          'fixation',struct('eye_fix_idx',struct('eye_fix_idx',[],'ang_fix_idx',[],'v_ang_fix_idx',[]),...
                                            'gip_fix_idx',[],'head_fix_idx',[]));
-
-    %% load stream
-    s_eyeGaze = pipe_pars.streams{cellfun(@(x) strcmp(x.info.name,'ProEyeGaze'), pipe_pars.streams)}; % Accuracy:0.5 deg – 1.1 deg
-
+                                       
     %% extract data from eye Gaze stream
-    eye_3D_pos = s_eyeGaze.time_series(5:10,:); % left_xyz, right_xyz
-    gip_3D_pos = s_eyeGaze.time_series(11:13,:); % obj_xyz
-    head_pos = s_eyeGaze.time_series(14:16,:); % head_xyz
-    head_direct = s_eyeGaze.time_series(17:19,:); % head_direction_xyz
-    v_head = s_eyeGaze.time_series(20:22,:); % head_vel_xyz
-    v_ang_head = s_eyeGaze.time_series(23:25,:); % head_ang_vel_xyz
-    eye_open_idx = s_eyeGaze.time_series(26:27,:); % left, right
+    seg_range = s_eyeGaze.segments(1).index_range; % experiment segment 
+    [nbchan, pnts] = size(s_eyeGaze.time_series(:,seg_range(1):seg_range(2))); % channel and data length
+    eye_3D_pos = s_eyeGaze.time_series(5:10,seg_range(1):seg_range(2)); % left_xyz, right_xyz
+    gip_3D_pos = s_eyeGaze.time_series(11:13,seg_range(1):seg_range(2));
+    head_loc = s_eyeGaze.time_series(14:16,seg_range(1):seg_range(2));
+    head_direct = s_eyeGaze.time_series(17:19,seg_range(1):seg_range(2));
+    head_vel = s_eyeGaze.time_series(20:22,seg_range(1):seg_range(2));
+    head_rot = s_eyeGaze.time_series(23:25,seg_range(1):seg_range(2));
+    eye_open_idx = s_eyeGaze.time_series(26:27,seg_range(1):seg_range(2));
+    chest_loc = s_eyeGaze.time_series(28:30,seg_range(1):seg_range(2));
+    chest_direct = s_eyeGaze.time_series(31:33,seg_range(1):seg_range(2));
+    chest_rot = s_eyeGaze.time_series(34:36,seg_range(1):seg_range(2));
+    
     pt_eg = s_eyeGaze.time_stamps-s_eyeGaze.time_stamps(1);
     srate = floor(1/mean(diff(pt_eg)));
     % =====================================
-    gaze_struct.time_stamps = pt_eg;
-    gaze_struct.srate = srate;
+    fix_struct.time_stamps = pt_eg;
+    fix_struct.srate = srate;
 
     %% based on eye tracker measurement confidence and eye position to identify gaps (missing points) in data
     % eye position will go to [0,0,1]' when losing data. Emperical data
@@ -116,9 +164,9 @@ function gaze_struct = cal_fixation(streams,varargin)
         end
     end
     % =====================================
-    gaze_struct.gap_detection.eye_open_idx = eye_open_idx;
-    gaze_struct.gap_detection.blink_idx = blink_idx;
-    gaze_struct.gap_detection.dataLose_idx = dataLose_idx;
+    fix_struct.gap_detection.eye_open_idx = eye_open_idx;
+    fix_struct.gap_detection.blink_idx = blink_idx;
+    fix_struct.gap_detection.dataLose_idx = dataLose_idx;
     
     %% smoothing eye location and gip using moving average
     mv_avg_eye_3D_pos = eye_3D_pos;
@@ -134,8 +182,8 @@ function gaze_struct = cal_fixation(streams,varargin)
         end
     end
     % =====================================
-    gaze_struct.reconstruct_3D_pos.eye_pos = mv_avg_eye_3D_pos;
-    gaze_struct.reconstruct_3D_pos.gip_pos = mv_avg_gip_3D_pos;
+    fix_struct.reconstruct_3D_pos.eye_pos = mv_avg_eye_3D_pos;
+    fix_struct.reconstruct_3D_pos.gip_pos = mv_avg_gip_3D_pos;
     
     %% calculate eye movement angular velocity
     switch pipe_pars.eye_selection
@@ -160,8 +208,8 @@ function gaze_struct = cal_fixation(streams,varargin)
         error('[Calculate angular velocity]: dot product of 2 eye gaze position is greater than 1.')
     end
     % =====================================
-    gaze_struct.ang_movement.ang = ang;
-    gaze_struct.ang_movement.ang_vel = v_ang;
+    fix_struct.ang_movement.ang = ang;
+    fix_struct.ang_movement.ang_vel = v_ang;
     
     %% calculate eye fixation based on angular and angular velocity
     % calculate eye fixation based on angular
@@ -200,8 +248,8 @@ function gaze_struct = cal_fixation(streams,varargin)
     end
     
     % =====================================
-    gaze_struct.eye_fix_idx.ang_fix_idx = ang_fix_idx;
-    gaze_struct.eye_fix_idx.v_ang_fix_idx = v_ang_fix_idx;
-    gaze_struct.eye_fix_idx.eye_fix_idx = eye_fix_idx;
+    fix_struct.eye_fix_idx.ang_fix_idx = ang_fix_idx;
+    fix_struct.eye_fix_idx.v_ang_fix_idx = v_ang_fix_idx;
+    fix_struct.eye_fix_idx.eye_fix_idx = eye_fix_idx;
     
 end
