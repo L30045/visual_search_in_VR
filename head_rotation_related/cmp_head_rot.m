@@ -49,14 +49,14 @@ seg_range = s_eyeGaze.segments(1).index_range;
 fgip_idx = cal_fix_index(streams);
 
 %% smoothing all the data streams by moving average
-ori_data = s_eyeGaze.time_series(:,seg_range(1):seg_range(2));
-smooth_data = zeros(size(ori_data));
-mv_avg_win_len = floor(noise_reduction/2);
-for m_i = mv_avg_win_len+1:pnts-mv_avg_win_len
-    if all(~isnan(smooth_data(:,m_i+(-mv_avg_win_len:mv_avg_win_len)))) % ensure there is no missing signals
-        smooth_data(:,m_i) = mean(ori_data(:,m_i+(-mv_avg_win_len:mv_avg_win_len)),2);
-    end
-end
+% ori_data = s_eyeGaze.time_series(:,seg_range(1):seg_range(2));
+% smooth_data = zeros(size(ori_data));
+% mv_avg_win_len = floor(noise_reduction/2);
+% for m_i = mv_avg_win_len+1:pnts-mv_avg_win_len
+%     if all(~isnan(smooth_data(:,m_i+(-mv_avg_win_len:mv_avg_win_len)))) % ensure there is no missing signals
+%         smooth_data(:,m_i) = mean(ori_data(:,m_i+(-mv_avg_win_len:mv_avg_win_len)),2);
+%     end
+% end
 
 %% extract data from eye Gaze stream
 eye_2D_pos = s_eyeGaze.time_series(1:4,seg_range(1):seg_range(2)); % left_xy, right_xy
@@ -85,37 +85,158 @@ end
 srate = 1/mean(diff(pt_eg));
 
 %% find out targets and distractors time points 
+merge_flag = true;
 idx_tar = find(cellfun(@(x) contains(x,'Target'),s_eyeMarker.time_series));
 idx_dis = find(cellfun(@(x) contains(x,'Distractor'),s_eyeMarker.time_series));
 tar_name = s_eyeMarker.time_series(idx_tar);
 dis_name = s_eyeMarker.time_series(idx_dis);
 uni_tar = unique(tar_name);
 uni_dis = unique(dis_name);
-% merge markers with small gap
-thres_MarkerGap = 5; % sec
-diff_t_tar = diff(pt_em(idx_tar)) > thres_MarkerGap;
-diff_t_dis = diff(pt_em(idx_dis)) > thres_MarkerGap;
-diff_n_tar = ~cellfun(@(x, y) strcmp(x, y), tar_name(1:end-1), tar_name(2:end));
-diff_n_dis = ~cellfun(@(x, y) strcmp(x, y), dis_name(1:end-1), dis_name(2:end));
-merg_tar = [true diff_t_tar | diff_n_tar];
-merg_dis = [true diff_t_dis | diff_n_dis];
+if merge_flag
+    % merge markers with small gap
+    thres_MarkerGap = 1; % sec
+    diff_t_tar = diff(pt_em(idx_tar)) > thres_MarkerGap;
+    diff_t_dis = diff(pt_em(idx_dis)) > thres_MarkerGap;
+    diff_n_tar = ~cellfun(@(x, y) strcmp(x, y), tar_name(1:end-1), tar_name(2:end));
+    diff_n_dis = ~cellfun(@(x, y) strcmp(x, y), dis_name(1:end-1), dis_name(2:end));
+    merg_tar = [true diff_t_tar | diff_n_tar];
+    merg_dis = [true diff_t_dis | diff_n_dis];
+else
+    merg_tar = true(size(idx_tar));
+    merg_dis = true(size(idx_dis));
+end
 % event time
 t_tar = pt_em(idx_tar(merg_tar));
 t_dis = pt_em(idx_dis(merg_dis));
-t_interest = [idx_tar(merg_tar), idx_dis(merg_dis); t_tar, t_dis;...
+t_interest = [idx_tar(merg_tar), idx_dis(merg_dis);...
+              find(ismember(pt_eg,t_tar)), find(ismember(pt_eg,t_dis));...
+              t_tar, t_dis;...
               ones(size(t_tar)), zeros(size(t_dis))]';
-t_interest = sortrows(t_interest, 2); % [idx in eventMarker series, time stamps in eyeTracker, labels for tar/dis]
+t_interest = sortrows(t_interest, 2);
+% [idx in eventMarker series,
+%  idx in eyeTracker series,
+%  time stamps in eyeTracker,
+%  labels for tar/dis]
 
-%% centralize head location
+%% Parameter setting
 % head_loc = head_loc - mean(head_loc,2);
-ds = 10;
-ds_h = head_loc(:,1:ds:end);
+ds = 20;
+ds_h = head_loc(:,1:ds:end); % down sampling head location
+ev_gip = gip_3D_pos(:,t_interest(:,2)); 
+tmp_tar_idx = t_interest(:,4)==1;
+tar_gip = ev_gip(:,tmp_tar_idx);
+dis_gip = ev_gip(:,~tmp_tar_idx);
+tmp_t_scale = pt_eg(1:ds:end);
+plt_ev = t_interest(:,[3,4]);
+% plt_ev(:,1) = discretize(t_interest(:,2),1:ds:length(pt_eg));
+for tmp_i = 1:size(t_interest,1)
+    [~,plt_ev(tmp_i,1)] = min(abs(tmp_t_scale - plt_ev(tmp_i,1)));
+end
 cmap = jet(size(ds_h,2));
 ms_list = 15*ones(1,size(ds_h,2));
+
+%% plot Room general view 2d
 figure
 scatter(ds_h(1,:),ds_h(3,:),ms_list,cmap)
+hold on
+h1 = scatter(tar_gip(1,:),tar_gip(3,:),100*ones(1,length(t_tar)),'b','d','filled');
+h1.LineWidth = lw;
+h1.MarkerEdgeColor = 'k';
+h2 = scatter(dis_gip(1,:),dis_gip(3,:),100*ones(1,length(t_dis)),'r','s','filled');
+h2.LineWidth = lw;
+h2.MarkerEdgeColor = 'k';
 % scatter3(ds_h(1,:),ds_h(2,:),ds_h(3,:))
-% scatter3(head_loc(1,:),head_loc(2,:),head_loc(3,:));
+
+%% Room general view 3d
+figure
+hold on
+scatter3(gip_3D_pos(1,:),gip_3D_pos(2,:),gip_3D_pos(3,:),'x');
+scatter3(head_loc(1,:),head_loc(2,:),head_loc(3,:),'filled');
+h1 = scatter3(tar_gip(1,:),tar_gip(2,:),tar_gip(3,:),100,'b','d','filled');
+h1.LineWidth = lw;
+h1.MarkerEdgeColor = 'k';
+h2 = scatter3(dis_gip(1,:),dis_gip(2,:),dis_gip(3,:),100,'r','s','filled');
+h2.LineWidth = lw;
+h2.MarkerEdgeColor = 'k';
+
+%% animation 2d
+t_pause = 0.05;
+tar_count = 20; % slow down when looking at target
+slow_rate = 1;
+tc_i = 0;
+pc_i = 1;
+anime_buffer1 = cell(1,10); % for head location
+anime_buffer2 = cell(3,15); % for event marker
+tmp_tar_idx = t_interest(:,4)==1;
+tar_gip = ev_gip(:,tmp_tar_idx);
+dis_gip = ev_gip(:,~tmp_tar_idx);
+tmp_t_scale = pt_eg(1:ds:end);
+plt_ev = t_interest(:,[3,4]);
+for tmp_i = 1:size(t_interest,1)
+    [~,plt_ev(tmp_i,1)] = min(abs(tmp_t_scale - plt_ev(tmp_i,1)));
+end
+% plot only target event
+% tmp_idx = plt_ev(:,2)==0;
+% plt_ev(tmp_idx,:) = [];
+
+anime_fig = figure;
+% xlim([min([ds_h(1,:),tar_gip(1,:),dis_gip(1,:)]-1),max([ds_h(1,:),tar_gip(1,:),dis_gip(1,:)])+1])
+% ylim([min([ds_h(3,:),tar_gip(3,:),dis_gip(3,:)]-1),max([ds_h(3,:),tar_gip(3,:),dis_gip(3,:)])+1])
+hold on
+set(gcf,'color',[1 1 1]);
+h1 = scatter(gip_3D_pos(1,:),gip_3D_pos(3,:),10,'x');
+h1.CData = [0.7 0.7 0.7];
+h1 = scatter(tar_gip(1,:),tar_gip(3,:),100*ones(1,length(t_tar)),'b','d','filled');
+h1.LineWidth = lw;
+h1.MarkerEdgeColor = 'k';
+h2 = scatter(dis_gip(1,:),dis_gip(3,:),100*ones(1,length(t_dis)),'r','s','filled');
+h2.LineWidth = lw;
+h2.MarkerEdgeColor = 'k';
+anime_buffer1{1,end} = scatter(ds_h(1,1),ds_h(3,1),50,'k','filled');
+l1 = legend(flipud(findobj(gca,'-regexp','DisplayName', '[^'']')));
+l1.String = {'GIP (all)','Target (GIP)','Distractor (GIP)','Head Location'};
+set(anime_fig,'defaultLegendAutoUpdate','off')
+set(gca,'fontsize',20);
+set(gca,'visible','off');
+set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]);
+pause()
+for i = 2:2319 %size(ds_h,2)
+    if tc_i == 0
+        t_p = t_pause;
+    end
+    cellfun(@delete, anime_buffer1(:,1));
+    cellfun(@delete, anime_buffer2(:,1));
+    anime_buffer1(:,1:end-1) = anime_buffer1(:,2:end);
+    anime_buffer2(:,1:end-1) = anime_buffer2(:,2:end);
+    anime_buffer1{1,end} = scatter(ds_h(1,i),ds_h(3,i),50,'k','filled');
+    pause(t_p);
+    if i == plt_ev(pc_i,1)
+        if plt_ev(pc_i,2)==1
+            t_p = slow_rate*t_pause;
+            tc_i = tar_count;
+            anime_buffer2{1,end} = scatter(ds_h(1,i),ds_h(3,i),100,'b','d','filled');
+            anime_buffer2{2,end} = scatter(tar_gip(1,pc_i),tar_gip(3,pc_i),100,'b','d','filled');
+            anime_buffer2{2,end}.LineWidth = lw;
+            anime_buffer2{2,end}.MarkerEdgeColor = 'k';
+            anime_buffer2{3,end} = plot([ds_h(1,i),tar_gip(1,pc_i)],[ds_h(3,i),tar_gip(3,pc_i)],'b-','linewidth',2);
+            pause(1)
+            plt_ev(1,:) = [];
+            tar_gip(:,1) = [];
+        else
+            anime_buffer2{1,end} = scatter(ds_h(1,i),ds_h(3,i),100,'r','s','filled');
+            anime_buffer2{2,end} = scatter(dis_gip(1,1),dis_gip(3,1),100,'r','s','filled');
+            anime_buffer2{2,end}.LineWidth = lw;
+            anime_buffer2{2,end}.MarkerEdgeColor = 'k';
+            anime_buffer2{3,end} = plot([ds_h(1,i),dis_gip(1,1)],[ds_h(3,i),dis_gip(3,1)],'r-','linewidth',2);
+            pause(t_p)
+            plt_ev(1,:) = [];
+            dis_gip(:,1) = [];
+        end
+%         pc_i = pc_i +1;
+    end
+    tc_i = max(tc_i - 1, 0);
+%     drawnow
+end
 
 %% head rotation behaviors before and after finding tar
 ev_duration = [-1 2]; % sec before and after finding target/ distractor
@@ -162,8 +283,8 @@ title('Head Rot. (all)')
 set(gca,'xTick',round(t_ruler(1)):0.1:round(t_ruler(end)))
 ax = gca;
 xName = repmat({''},1,length(ax.XTick));
-tmp = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
-[xName{1:5:end}] = deal(tmp{:});
+tmp_i = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
+[xName{1:5:end}] = deal(tmp_i{:});
 set(gca,'xTickLabel',xName)
 set(gca,'fontsize',30)
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]);
@@ -203,8 +324,8 @@ title('GIP Fixation')
 set(gca,'xTick',round(t_ruler(1)):0.1:round(t_ruler(end)))
 ax = gca;
 xName = repmat({''},1,length(ax.XTick));
-tmp = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
-[xName{1:5:end}] = deal(tmp{:});
+tmp_i = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
+[xName{1:5:end}] = deal(tmp_i{:});
 set(gca,'xTickLabel',xName)
 set(gca,'fontsize',30)
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]);
@@ -247,8 +368,8 @@ title('Distractor')
 set(gca,'xTick',round(t_ruler(1)):0.1:round(t_ruler(end)))
 ax = gca;
 xName = repmat({''},1,length(ax.XTick));
-tmp = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
-[xName{1:5:end}] = deal(tmp{:});
+tmp_i = arrayfun(@(x) num2str(x),round(t_ruler(1)):0.5:round(t_ruler(end)),'uniformoutput',0);
+[xName{1:5:end}] = deal(tmp_i{:});
 set(gca,'xTickLabel',xName)
 set(gca,'fontsize',30)
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]);
