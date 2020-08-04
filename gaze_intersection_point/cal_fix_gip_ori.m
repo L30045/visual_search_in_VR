@@ -1,4 +1,4 @@
-function [fix_idx, speed_gip] = cal_fix_gip(test_data, calibration_data, srate, noise_reduction, velocity_smooth_win_len, thres_v, thres_portion, max_fix_interval, min_fix_len, san_check)
+function [fix_idx, speed_gip] = cal_fix_gip_ori(test_data, calibration_data, srate, noise_reduction, velocity_smooth_win_len, thres_v, thres_portion, max_fix_interval, min_fix_len, san_check)
 %% calculate fixation based on GIP
 % This function will calculation fixation based on the speed of GIP. The
 % function assumes the data has been preprocessed and noise free.
