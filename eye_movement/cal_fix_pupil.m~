@@ -59,7 +59,7 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     addOptional(p,'noise_reduction',5) % moving average with +/- 5 samples
     addOptional(p,'velocity_smooth_win_len',40) % ms (calculate angular velocity based on a sliding window, time point without enough samples to fill the window will not be calculated. ie. the beginning and end of a recording)
     addOptional(p,'thres_ang',1) % deg (angular higher than this threshold will be marked as saccade) (Default: 0.5 deg/s for Nystrom 2010)
-    addOptional(p,'thres_ang_v',130) % deg (angular velocity higher than this threshold will be marked as saccade) (Default: 30 deg/s for tobii, 130 deg/s for Eye tracking 2017)
+    addOptional(p,'thres_ang_v',0) % deg (angular velocity higher than this threshold will be marked as saccade) (Default: 30 deg/s for tobii, 130 deg/s for Eye tracking 2017)
     addOptional(p,'fix_selection','velocity') % select fixation criteria ('velocity','dispersion','strictVD','looseVD')
     addOptional(p,'max_fix_interval',75) % ms (merge adjacent fixations if the interval is smaller than 75 ms)
     addOptional(p,'max_fix_ang',1) % deg (merge adjacent fixations if the angle difference is smaller than 1 deg) (0.5 deg for tobii default)
@@ -172,16 +172,16 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     disp('Cacluate eye movement angle and angular speed.')
 	[ang_l, v_ang_l, ang_r, v_ang_r] = cal_ang(mv_avg_eye_3D_pos,srate,pipe_pars.velocity_smooth_win_len);
     % =====================================
-    fix_struct.eye_movement.left_ang = ang_l;
-    fix_struct.eye_movement.left_ang_vel = v_ang_l;
-    fix_struct.eye_movement.right_ang = ang_r;
-    fix_struct.eye_movement.right_ang_vel = v_ang_r;
+    fix_struct.eye_movement.left_ang = ang_l/pi*180;
+    fix_struct.eye_movement.left_ang_vel = v_ang_l/pi*180;
+    fix_struct.eye_movement.right_ang = ang_r/pi*180;
+    fix_struct.eye_movement.right_ang_vel = v_ang_r/pi*180;
     if ~isempty(cali_data)
         [cali_ang_l, cali_v_ang_l, cali_ang_r, cali_v_ang_r] = cal_ang(mv_avg_cali_3D_pos,srate,pipe_pars.velocity_smooth_win_len);
-        fix_struct.cali_eye_movement.left_ang = cali_ang_l;
-        fix_struct.cali_eye_movement.left_ang_vel = cali_v_ang_l;
-        fix_struct.cali_eye_movement.right_ang = cali_ang_r;
-        fix_struct.cali_eye_movement.right_ang_vel = cali_v_ang_r;
+        fix_struct.cali_eye_movement.left_ang = cali_ang_l/pi*180;
+        fix_struct.cali_eye_movement.left_ang_vel = cali_v_ang_l/pi*180;
+        fix_struct.cali_eye_movement.right_ang = cali_ang_r/pi*180;
+        fix_struct.cali_eye_movement.right_ang_vel = cali_v_ang_r/pi*180;
     end
     disp('Done.')
     
@@ -195,32 +195,22 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     % calculate eye fixation based on angular
     if pipe_pars.thres_ang == 0
         % use data driven threshold
-        ang_fix_idx_l = ang_l/pi*180 < nanmean(ang_l/pi*180)+nanstd(ang_l/pi*180);
-        ang_fix_idx_r = ang_r/pi*180 < nanmean(ang_r/pi*180)+nanstd(ang_r/pi*180);
-    else
-        % use user input threshold
-        ang_fix_idx_l = ang_l/pi*180 < pipe_pars.thres_ang;
-        ang_fix_idx_r = ang_r/pi*180 < pipe_pars.thres_ang;
+        pipe_pars.thres_ang = mean([nanmean(ang_l/pi*180)+nanstd(ang_l/pi*180),...
+                                    nanmean(ang_r/pi*180)+nanstd(ang_r/pi*180)]);
     end
+    ang_fix_idx_l = ang_l/pi*180 < pipe_pars.thres_ang;
+    ang_fix_idx_r = ang_r/pi*180 < pipe_pars.thres_ang;
     % calculate eye fixation based on angular velocity
     if pipe_pars.thres_ang_v == 0
         % use data driven threshold
-        v_ang_fix_idx_l = v_ang_l/pi*180 < nanmean(v_ang_l/pi*180)+0.04*nanstd(v_ang_l/pi*180); % from Eye tracking methodology 2017 pp.156 Tabel 13.1
-        v_ang_fix_idx_r = v_ang_r/pi*180 < nanmean(v_ang_r/pi*180)+0.04*nanstd(v_ang_r/pi*180);
-    else
-        % use user input threshold
-        v_ang_fix_idx_l = v_ang_l/pi*180 < pipe_pars.thres_ang_v;
-        v_ang_fix_idx_r = v_ang_r/pi*180 < pipe_pars.thres_ang_v;
+        pipe_pars.thres_ang_v = mean([nanmean(v_ang_l/pi*180)+0.04*nanstd(v_ang_l/pi*180),...
+                                      nanmean(v_ang_r/pi*180)+0.04*nanstd(v_ang_r/pi*180)]);
     end
+    v_ang_fix_idx_l = v_ang_l/pi*180 < pipe_pars.thres_ang_v;
+    v_ang_fix_idx_r = v_ang_r/pi*180 < pipe_pars.thres_ang_v;
     
-    disp('Done.')
-    
-    %% merge adjacent fixation
-    disp('Merge adjacent fixation.')
-    max_fix_interval = pipe_pars.max_fix_interval/1000*srate;
-    [ang_fix_idx_l,v_ang_fix_idx_l,ang_fix_idx_r,v_ang_fix_idx_r] = merge_adj_fix(ang_fix_idx_l,v_ang_fix_idx_l,ang_fix_idx_r,v_ang_fix_idx_r,max_fix_interval,ang_l,ang_r,pipe_pars.max_fix_ang);
-    disp('Done.')
-    
+    disp('Done.')    
+  
     %% remove fixation with short period
     disp('Remove fixation with short period.')
     min_fix_len = pipe_pars.min_fix_len/1000*srate;
@@ -265,6 +255,7 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     
     % =====================================
     fix_struct.eye_fixation.eye_fix_idx = eye_fix_idx;
+    fix_struct.pipeline_pars = pipe_pars;
     
 end
 

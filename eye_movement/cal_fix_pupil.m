@@ -172,49 +172,36 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     disp('Cacluate eye movement angle and angular speed.')
 	[ang_l, v_ang_l, ang_r, v_ang_r] = cal_ang(mv_avg_eye_3D_pos,srate,pipe_pars.velocity_smooth_win_len);
     % =====================================
-    fix_struct.eye_movement.left_ang = ang_l;
-    fix_struct.eye_movement.left_ang_vel = v_ang_l;
-    fix_struct.eye_movement.right_ang = ang_r;
-    fix_struct.eye_movement.right_ang_vel = v_ang_r;
+    fix_struct.eye_movement.left_ang = ang_l/pi*180;
+    fix_struct.eye_movement.left_ang_vel = v_ang_l/pi*180;
+    fix_struct.eye_movement.right_ang = ang_r/pi*180;
+    fix_struct.eye_movement.right_ang_vel = v_ang_r/pi*180;
     if ~isempty(cali_data)
         [cali_ang_l, cali_v_ang_l, cali_ang_r, cali_v_ang_r] = cal_ang(mv_avg_cali_3D_pos,srate,pipe_pars.velocity_smooth_win_len);
-        fix_struct.cali_eye_movement.left_ang = cali_ang_l;
-        fix_struct.cali_eye_movement.left_ang_vel = cali_v_ang_l;
-        fix_struct.cali_eye_movement.right_ang = cali_ang_r;
-        fix_struct.cali_eye_movement.right_ang_vel = cali_v_ang_r;
+        fix_struct.cali_eye_movement.left_ang = cali_ang_l/pi*180;
+        fix_struct.cali_eye_movement.left_ang_vel = cali_v_ang_l/pi*180;
+        fix_struct.cali_eye_movement.right_ang = cali_ang_r/pi*180;
+        fix_struct.cali_eye_movement.right_ang_vel = cali_v_ang_r/pi*180;
     end
     disp('Done.')
     
     %% calcualte threshold for angle and angular velocity based on calibration data if available
     if ~isempty(cali_data)
-        pipe_pars = cal_threshold(cali_ang_l,cali_ang_r,cali_v_ang_l,cali_v_ang_r,pipe_pars);
+        pipe_pars = cal_threshold(ang_l,ang_r,v_ang_l,v_ang_r,...
+                                  cali_ang_l,cali_ang_r,cali_v_ang_l,cali_v_ang_r,pipe_pars);
     end
     
     %% calculate eye fixation based on angular and angular velocity
     disp('Calculate eye fixation.')
     % calculate eye fixation based on angular
-    if pipe_pars.thres_ang == 0
-        % use data driven threshold
-        ang_fix_idx_l = ang_l/pi*180 < nanmean(ang_l/pi*180)+nanstd(ang_l/pi*180);
-        ang_fix_idx_r = ang_r/pi*180 < nanmean(ang_r/pi*180)+nanstd(ang_r/pi*180);
-    else
-        % use user input threshold
-        ang_fix_idx_l = ang_l/pi*180 < pipe_pars.thres_ang;
-        ang_fix_idx_r = ang_r/pi*180 < pipe_pars.thres_ang;
-    end
+    ang_fix_idx_l = ang_l/pi*180 < pipe_pars.thres_ang;
+    ang_fix_idx_r = ang_r/pi*180 < pipe_pars.thres_ang;
     % calculate eye fixation based on angular velocity
-    if pipe_pars.thres_ang_v == 0
-        % use data driven threshold
-        v_ang_fix_idx_l = v_ang_l/pi*180 < nanmean(v_ang_l/pi*180)+0.04*nanstd(v_ang_l/pi*180); % from Eye tracking methodology 2017 pp.156 Tabel 13.1
-        v_ang_fix_idx_r = v_ang_r/pi*180 < nanmean(v_ang_r/pi*180)+0.04*nanstd(v_ang_r/pi*180);
-    else
-        % use user input threshold
-        v_ang_fix_idx_l = v_ang_l/pi*180 < pipe_pars.thres_ang_v;
-        v_ang_fix_idx_r = v_ang_r/pi*180 < pipe_pars.thres_ang_v;
-    end
+    v_ang_fix_idx_l = v_ang_l/pi*180 < pipe_pars.thres_ang_v;
+    v_ang_fix_idx_r = v_ang_r/pi*180 < pipe_pars.thres_ang_v;
     
-    disp('Done.')
-    
+    disp('Done.')    
+  
     %% merge adjacent fixation
     disp('Merge adjacent fixation.')
     max_fix_interval = pipe_pars.max_fix_interval/1000*srate;
@@ -265,6 +252,7 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     
     % =====================================
     fix_struct.eye_fixation.eye_fix_idx = eye_fix_idx;
+    fix_struct.pipeline_pars = pipe_pars;
     
 end
 
