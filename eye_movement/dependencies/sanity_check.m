@@ -40,7 +40,7 @@ if ~isempty(fix_struct.pipeline_pars.calibration_data)
 end
 % fixation portion
 fix_rate = sum(fix_struct.eye_fixation.eye_fix_idx)/length(t_ruler);
-fprintf('Fixation portion: %.2f%%\n',fix_rate);
+fprintf('Fixation portion: %2.1f%%\n',fix_rate);
 disp('====================');
 
 %% visualization

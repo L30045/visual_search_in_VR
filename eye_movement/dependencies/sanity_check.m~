@@ -26,7 +26,7 @@ avg_blink = length(fix_struct.gap_detection.blink_idx)/exp_time;
 fprintf('Average number of blink per min: %.2f (average for adults: 10)\n',avg_blink);
 % data missing rate
 avg_miss = length([fix_struct.gap_detection.dataLose_idx{:}])/length(t_ruler);
-fprintf('Data missing rate: %.3f%%\n',avg_miss);
+fprintf('Data missing rate: %f%%\n',avg_miss);
 disp('====================');
 
 %% exam threshold
@@ -75,11 +75,13 @@ switch lower(fix_struct.pipeline_pars.fix_selection)
         plt_thres_ang = thres_ang*fix_struct.eye_fixation.eye_fix_idx;
         plt_thres_ang_v = thres_ang*fix_struct.eye_fixation.eye_fix_idx;
     case 'strictvd'
+        fix_flag = 3;
         plt_a = thres_ang;
         plt_av = thres_ang_v;
         plt_thres_ang = thres_ang*fix_struct.eye_fixation.eye_fix_idx;
         plt_thres_ang_v = thres_ang_v*fix_struct.eye_fixation.eye_fix_idx;
     case 'loosevd'
+        fix_flag = 3;
         plt_a = thres_ang;
         plt_av = thres_ang_v;
         plt_thres_ang = thres_ang*fix_struct.eye_fixation.eye_fix_idx;
@@ -94,7 +96,9 @@ plot(t_ruler, plt_ang, '-', 'DisplayName', 'Angle','Color',[0.5 0.5 1],'LineWidt
 hold on
 grid on
 plot(t_ruler, plt_fix_ang, 'b-', 'DisplayName', 'Fix','LineWidth',lw);
-plot(t_ruler, plt_thres_ang,'r-','DisplayName',sprintf('Threshold = %.2f deg',plt_a),'LineWidth',lw)
+if fix_flag ~=1
+    plot(t_ruler, plt_thres_ang,'r-','DisplayName',sprintf('Threshold = %.2f deg',plt_a),'LineWidth',lw)
+end
 xlabel('Time (sec)')
 ylabel('Deg')
 ylim([0 10])
@@ -109,7 +113,9 @@ plot(t_ruler, plt_ang_v, '-', 'DisplayName', 'Angular speed','Color',[0.5 0.5 1]
 hold on
 grid on
 plot(t_ruler, plt_fix_ang_v, 'b-', 'DisplayName', 'Fix','LineWidth',lw);
-plot(t_ruler, plt_thres_ang_v,'r-','DisplayName',sprintf('Threshold = %.2f deg/sec',plt_av),'LineWidth',lw)
+if fix_flag ~=2
+    plot(t_ruler, plt_thres_ang_v,'r-','DisplayName',sprintf('Threshold = %.2f deg/sec',plt_av),'LineWidth',lw)
+end
 xlabel('Time (sec)')
 ylabel('Deg/sec')
 ylim([0 150])
@@ -117,9 +123,5 @@ xlim([0 15])
 legend('show')
 set(gca,'fontsize',20)
 title('Angular speed vs Time')
-
-
-
-
 
 end

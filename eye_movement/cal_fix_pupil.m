@@ -189,6 +189,20 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     if ~isempty(cali_data)
         pipe_pars = cal_threshold(ang_l,ang_r,v_ang_l,v_ang_r,...
                                   cali_ang_l,cali_ang_r,cali_v_ang_l,cali_v_ang_r,pipe_pars);
+    else
+        if pipe_pars.thres_ang == 0
+            % data driven threshold
+            pipe_pars.thres_ang = mean([nanmean(ang_l/pi*180)+nanstd(ang_l/pi*180),...
+                                        nanmean(ang_r/pi*180)+nanstd(ang_r/pi*180)]);
+            fprintf('[Threshold setting]: Angle threshold from whole data = %.2f deg.\n',pipe_pars.thres_ang);
+        end
+        % angular speed trheshold
+        if pipe_pars.thres_ang_v == 0
+            % use data driven threshold
+            pipe_pars.thres_ang_v = mean([nanmean(v_ang_l/pi*180)+0.04*nanstd(v_ang_l/pi*180),...
+                                          nanmean(v_ang_r/pi*180)+0.04*nanstd(v_ang_r/pi*180)]);
+            fprintf('[Threshold setting]: Angular speed threshold from whole data = %.2f deg/sec.\n',pipe_pars.thres_ang_v);
+        end
     end
     
     %% calculate eye fixation based on angular and angular velocity
