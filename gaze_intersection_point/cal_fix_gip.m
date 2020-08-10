@@ -92,8 +92,15 @@ if thres_v == 0
         % ============
         % method 2: use median + 3 * quantile
         % ============
+%         tmp = speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len);
+%         thres_v = nanmedian(tmp) + 3*diff(quantile(tmp,[0.5, 0.95]));
+        % ============
+        % method 3: fit into truncated normal distribution ([0 Inf]),
+        % threshold at mean + 3*std
+        % ============
         tmp = speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len);
-        thres_v = nanmedian(tmp) + 3*diff(quantile(tmp,[0.5, 0.95]));
+        [~, phat, ~] = fitdist_ntrunc(tmp,[0, Inf]);
+        thres_v = phat(1) + 3*phat(2);
     end
 end
 
