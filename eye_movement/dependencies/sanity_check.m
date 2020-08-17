@@ -25,7 +25,7 @@ fprintf('Fix definition: %s\n',fix_struct.pipeline_pars.fix_selection);
 avg_blink = length(fix_struct.gap_detection.blink_idx)/exp_time;
 fprintf('Average number of blink per min: %.2f (average for adults: 10)\n',avg_blink);
 % data missing rate
-avg_miss = length([fix_struct.gap_detection.dataLose_idx{:}])/length(t_ruler);
+avg_miss = length([fix_struct.gap_detection.dataLose_idx{:}])/length(t_ruler)*100;
 fprintf('Data missing rate: %.3f%%\n',avg_miss);
 disp('====================');
 
@@ -39,7 +39,7 @@ if ~isempty(fix_struct.pipeline_pars.calibration_data)
     fprintf('Calibration-data-driven Angular speed threshold: %.2f deg/sec\n',fix_struct.pipeline_pars.cali_thres_ang_v);
 end
 % fixation portion
-fix_rate = sum(fix_struct.eye_fixation.eye_fix_idx)/length(t_ruler);
+fix_rate = sum(fix_struct.eye_fixation.eye_fix_idx)/length(t_ruler)*100;
 fprintf('Fixation portion: %2.1f%%\n',fix_rate);
 disp('====================');
 

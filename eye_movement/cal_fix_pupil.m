@@ -88,8 +88,10 @@ function fix_struct = cal_fix_pupil(test_data,srate,varargin)
     end
     if size(test_data,1) == 8
         eye_open_idx = test_data(7:8,:);
+        pipe_pars.eye_open_idx = true;
     else
         eye_open_idx = ones(2,size(test_data,2));
+        pipe_pars.eye_open_idx = false;
         disp('Eye openess index not found in test data. Assume eyes always open.')
     end
     if ~isempty(cali_data)
