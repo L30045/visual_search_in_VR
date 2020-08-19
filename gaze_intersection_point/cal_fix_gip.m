@@ -52,7 +52,7 @@ if ~exist('min_fix_len','var') || isempty(min_fix_len)
     min_fix_len = 150;
 end
 if ~exist('san_check','var') || isempty(san_check)
-    san_check = 0;
+    san_check = 1;
 end
 
 %% noise reduction by moving average
@@ -81,14 +81,15 @@ if thres_v == 0
     portion = cumsum(n)/sum(n);
     if isempty(calibration_data)
         % use data driven threshold, assume 70%(thres_portion) of data are fixation.
-        thres_v = edges(find(portion >= thres_portion, 1));
+%         thres_v = edges(find(portion >= thres_portion, 1));
+        thres_v = nanmean(speed_gip)+ 3*nanstd(speed_gip);
     else
         % use calibration data to calculate threshold
         % ============
         % method 1: assume data is normal distributed.
         % ============
-%         thres_v = mean(speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len))...
-%                   + 2*std(speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len));
+        thres_v = nanmean(speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len))...
+                  + 3*nanstd(speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len));
         % ============
         % method 2: use median + 3 * quantile
         % ============
@@ -97,10 +98,13 @@ if thres_v == 0
         % ============
         % method 3: fit into truncated normal distribution ([0 Inf]),
         % threshold at mean + 3*std
+        % this method fails bc all of our data are greater than 0.
+        % Therefore, when truncates our distribution at 0, it will have
+        % an error of dividing by 0. (no value is smaller than 0).
         % ============
-        tmp = speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len);
-        [~, phat, ~] = fitdist_ntrunc(tmp,[0, Inf]);
-        thres_v = phat(1) + 3*phat(2);
+%         tmp = speed_gip(vel_win_len+1:size(calibration_data,2)-vel_win_len);
+%         [~, phat, ~] = fitdist_ntrunc(tmp,[0, Inf]);
+%         thres_v = phat(1) + 3*phat(2);
     end
 end
 
@@ -144,7 +148,7 @@ for f_i = 1:length(fix_idx)
 end
 
 %% sanity check
-if san_check == 0
+if san_check == 1
     fprintf('\n Portion of fixation found: %.2f\n', sum(fix_idx)/size(data,2));
     fprintf('Thres Vel.: %f\n', thres_v);
     % fixation count distrubtion
