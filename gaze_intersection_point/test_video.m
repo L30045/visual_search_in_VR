@@ -2,11 +2,16 @@
 ori_video = VideoReader('DOWNTOWN DAY.mp4');
 nb_frame = ceil(ori_video.FrameRate*ori_video.Duration);
 frate = ori_video.FrameRate;
+vHeight = ori_video.Height;
+vWidth = ori_video.Width;
+lw = 5;
+ms = 200;
 
 %% load GIP data
-addpath(xdf_path)
-streams = load_xdf('pilot01_street_day.xdf');
-s_GIP = streams{2};
+% addpath(xdf_path)
+% streams = load_xdf('pilot01_street_day.xdf');
+s_GIP = load('test_GIP_stream.mat');
+s_GIP = s_GIP.s_GIP;
 % channel information
 % 1/ Video time stamp
 % 2/ x-coordinate of GIP on screen [0-1] (-1 means the gaze is not intersecting with the screen)
@@ -19,13 +24,74 @@ s_GIP = streams{2};
 % 9/ x-coordinate of right pupil position
 % 10/ y-coordinate of right pupil position  
 
-x_gip = s_GIP.time_series(2,:);
-y_gip = s_GIP.time_series(3,:);
+norm_x_gip = s_GIP.time_series(2,:);
+norm_y_gip = s_GIP.time_series(3,:);
 srate = round(s_GIP.info.effective_srate);
+% transfer back to video size
+v_x_gip = (norm_x_gip+1)*vWidth/2;
+v_y_gip = (norm_y_gip+1)*vHeight/2;
 
 if (round(length(x_gip)/srate) - round(nb_frame/frate)) > 1 %sec
     disp('Recording lengths of eye tracker and video are different.')
 end
 
 figure
-scatter(x_gip(1:100),y_gip(1:100))
+image(vFrame)
+hold on
+scatter(v_x_gip(1),v_y_gip(1),ms+10,'r','linewidth',lw);
+
+%% play video
+t_extract = [5 15]; %sec
+ori_video.CurrentTime = t_extract(1);
+t_pause = 1/frate;
+countFrame = diff(t_extract)*frate;
+tic
+for i = 1:countFrame
+    vFrame = readFrame(ori_video);
+    image(vFrame)
+%     pause(t_pause)
+end
+toc
+
+%%
+clip_video = VideoWriter('demo.avi','Uncompressed AVI');
+
+%% overlap video with gip for 20 sec (limited by memory)
+d_srate = 30;
+t_extract = [5 15]; %sec
+ori_video.CurrentTime = t_extract(1);
+t_pause = 1/d_srate;
+idx_start = t_extract(1)*srate;
+img_buffer = cell(1,2);
+gip_buffer = cell(1,2);
+buffer_flag = false;
+open(clip_video)
+% plot first plot
+vFrame = readFrame(ori_video);
+figure
+set(gcf,'units','normalized','outerposition',[0 0 1 1])
+img_buffer{1} = image(vFrame);
+hold on
+gip_buffer{1} = scatter(v_x_gip(idx_start),v_y_gip(idx_start),ms,'b');
+hold off
+input_frame = getframe(gcf);
+writeVideo(clip_video,input_frame);
+pause()
+% animation
+for p_i = 1:diff(t_extract)*d_srate
+    ori_video.CurrentTime = t_extract(1)+p_i*(1/d_srate);
+    vFrame = readFrame(ori_video);
+    img_buffer{~buffer_flag+1} = image(vFrame);
+    hold on
+    idx_plot = round(ori_video.CurrentTime*srate);
+    gip_buffer{~buffer_flag+1} = scatter(v_x_gip(idx_plot),v_y_gip(idx_plot),ms,'b','linewidth',lw);
+    input_frame = getframe(gcf);
+    writeVideo(clip_video,input_frame);
+    delete(img_buffer{buffer_flag+1})
+    delete(gip_buffer{buffer_flag+1})
+    buffer_flag = ~buffer_flag;
+    clf
+    pause(t_pause)
+end
+close(gcf)
+close(clip_video)
