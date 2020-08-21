@@ -31,7 +31,7 @@ srate = round(s_GIP.info.effective_srate);
 v_x_gip = (norm_x_gip+1)*vWidth/2;
 v_y_gip = (norm_y_gip+1)*vHeight/2;
 
-if (round(length(x_gip)/srate) - round(nb_frame/frate)) > 1 %sec
+if (round(length(v_x_gip)/srate) - round(nb_frame/frate)) > 1 %sec
     disp('Recording lengths of eye tracker and video are different.')
 end
 
@@ -54,7 +54,7 @@ end
 toc
 
 %%
-clip_video = VideoWriter('demo.avi','Uncompressed AVI');
+clip_video = VideoWriter('demo.avi','Motion JPEG AVI');
 
 %% overlap video with gip for 20 sec (limited by memory)
 d_srate = 30;
