@@ -31,14 +31,12 @@ srate = round(s_GIP.info.effective_srate);
 v_x_gip = (norm_x_gip+1)*vWidth/2;
 v_y_gip = (norm_y_gip+1)*vHeight/2;
 
+% remove the recording before video start
+pt_eg = s_GIP.time_stamps;
+
 if (round(length(v_x_gip)/srate) - round(nb_frame/frate)) > 1 %sec
     disp('Recording lengths of eye tracker and video are different.')
 end
-
-figure
-image(vFrame)
-hold on
-scatter(v_x_gip(1),v_y_gip(1),ms+10,'r','linewidth',lw);
 
 %% play video
 t_extract = [5 15]; %sec
@@ -53,7 +51,7 @@ for i = 1:countFrame
 end
 toc
 
-%%
+%% create clip video
 clip_video = VideoWriter('demo.avi','Motion JPEG AVI');
 
 %% overlap video with gip for 20 sec (limited by memory)
@@ -72,7 +70,7 @@ figure
 set(gcf,'units','normalized','outerposition',[0 0 1 1])
 img_buffer{1} = image(vFrame);
 hold on
-gip_buffer{1} = scatter(v_x_gip(idx_start),v_y_gip(idx_start),ms,'b');
+gip_buffer{1} = scatter(v_x_gip(idx_start),v_y_gip(idx_start),ms,'b','linewidth',lw);
 hold off
 input_frame = getframe(gcf);
 writeVideo(clip_video,input_frame);
