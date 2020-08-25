@@ -10,7 +10,9 @@ function fix_edges = find_edges(eye_fix_idx, srate)
     fix_edges = xor([eye_fix_idx, false], [false eye_fix_idx]);
     fix_edges = reshape(find(fix_edges),2,[])';
     fix_edges(:,2) = fix_edges(:,2)-1;
-    fprintf('Mean fix length: %.0f ms\n', mean(diff(fix_edges'))/srate*1000);
-    fprintf('Max fix length: %.0f ms\n', max(diff(fix_edges'))/srate*1000);
-    fprintf('Min fix length: %.0f ms\n', min(diff(fix_edges'))/srate*1000);
+    if exist('srate','var')
+        fprintf('Mean fix length: %.0f ms\n', mean(diff(fix_edges'))/srate*1000);
+        fprintf('Max fix length: %.0f ms\n', max(diff(fix_edges'))/srate*1000);
+        fprintf('Min fix length: %.0f ms\n', min(diff(fix_edges'))/srate*1000);
+    end
 end
