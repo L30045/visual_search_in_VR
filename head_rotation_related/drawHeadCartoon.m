@@ -139,7 +139,7 @@ if ~isempty(shoulderAngle)
 end
 
 %head
-h1=fill(nosex,nosey,'r','edgecolor','k','linewidth',0.5);
+h1=fill(nosex,nosey,'g','edgecolor','k','linewidth',0.5);
 rotate(h1,[0,0,1],-angle+deltaAngle,[x,y,0])
 
 if any(contains(event,'Head/Proximity'))
