@@ -13,8 +13,15 @@ ev_idx_struct = struct('t_eg', struct('obj_fix_idx',[],'tar_fix',[],'tar_miss',[
                        'pt_eg', pt_eg,'pt_em', pt_em,...
                        'com','t_eg: time index for eyeGaze stream. t_em: time_index for eyeMarker stream.');
 
-all_target = cellfun(@(x) strcmp(x(1:3),'Tar'),s_eyeMarker.time_series(1:length(pt_em)));
-all_distractor = cellfun(@(x) strcmp(x(1:3),'Dis'),s_eyeMarker.time_series(1:length(pt_em)));
+if isa(s_eyeMarker,'struct')
+    all_target = cellfun(@(x) strcmp(x(1:3),'Tar'),s_eyeMarker.time_series(1:length(pt_em)));
+    all_distractor = cellfun(@(x) strcmp(x(1:3),'Dis'),s_eyeMarker.time_series(1:length(pt_em)));
+elseif isa(s_eyeMarker,'cell')
+    all_target = cellfun(@(x) strcmp(x(1:3),'Tar'),s_eyeMarker(1:length(pt_em)));
+    all_distractor = cellfun(@(x) strcmp(x(1:3),'Dis'),s_eyeMarker(1:length(pt_em)));
+else
+    error('[Data Format Error]: cannot recognize the format of s_eyeMarker.')
+end
 target = all_target & ismember(pt_em, pt_eg(eye_fix_idx));
 distractor = all_distractor & ismember(pt_em, pt_eg(eye_fix_idx));
 miss_tar = (all_target - ismember(pt_em, pt_eg(eye_fix_idx))) > 0;
