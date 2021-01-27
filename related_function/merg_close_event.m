@@ -1,6 +1,6 @@
 function [t_tar, t_dis] = merg_close_event(ev_idx_struct, eyeMarker_name, merge_flag)
 %% merge target/distrator events if they satisfy the following 2 statements:
-% 1. too close to each other
+% 1. too close to each other (1 sec)
 % 2. has the same label name
 
 if ~exist('merge_flag','var')
