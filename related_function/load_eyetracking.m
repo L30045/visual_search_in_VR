@@ -1,4 +1,4 @@
-function data_struct = load_eyetracking(filename)
+function [data_struct, s_eyeMarker, s_eyeGaze] = load_eyetracking(filename)
 %% load eye tracking data
 % load head rotation stream
 streams = load_xdf(filename);

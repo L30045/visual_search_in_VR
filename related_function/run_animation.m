@@ -1,6 +1,9 @@
 %% make animation for vr room
 %% load stream
-streams = load_xdf('dataset/2020 recordings/pilot02_bullet_0708.xdf');
+subj_i = 7;
+filepath = ['/data/projects/ying/VR/bulletRoom/subjects/',sprintf('bullet_%02d/',subj_i)];
+filename = [filepath, sprintf('bullet_%02d_10min_session1.xdf',subj_i)];
+streams = load_xdf(filename);
 s_eyeMarker = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeMarker'), streams)};
 s_eyeGaze = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeGaze'), streams)};
 s_grab = streams{cellfun(@(x) strcmp(x.info.name,'GrabMarker'), streams)};
