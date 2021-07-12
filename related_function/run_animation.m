@@ -1,9 +1,6 @@
 %% make animation for vr room
 %% load stream
-subj_i = 7;
-filepath = ['/data/projects/ying/VR/bulletRoom/subjects/',sprintf('bullet_%02d/',subj_i)];
-filename = [filepath, sprintf('bullet_%02d_10min_session1.xdf',subj_i)];
-streams = load_xdf(filename);
+streams = load_xdf('dataset/old_dataset/2020 recordings/pilot02_bullet_0708.xdf');
 s_eyeMarker = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeMarker'), streams)};
 s_eyeGaze = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeGaze'), streams)};
 s_grab = streams{cellfun(@(x) strcmp(x.info.name,'GrabMarker'), streams)};
@@ -78,7 +75,7 @@ all_idx_dis = ev_idx_struct.t_eg.dis_fix|ev_idx_struct.t_eg.dis_miss;
 tar_fix = ev_idx_struct.t_eg.tar_fix;
 dis_fix = ev_idx_struct.t_eg.dis_fix;
 ev_idx = [all_idx_tar; tar_fix; all_idx_dis; dis_fix];
-test_range = 25000:26000;
+test_range = 1:length(tar_fix);
 fprintf('real-world time length: %.f sec\n', diff(test_range([1,end]))/srate)
 
 %%

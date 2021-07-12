@@ -34,7 +34,7 @@ for g_i = 1:length(gap_idx_l)
     else
         if bc_l - bf_l < max_gap_length/1000*srate && gap_idx_l(bf_l) == 1
             % fix small gap
-            eye_3D_pos(1:3,bf_l:bc_l-1) = eye_3D_pos(1:3,bf_l-1) + (eye_3D_pos(1:3,bc_l)-eye_3D_pos(1:3,bf_l-1))*(1:(bc_l-bf_l))/(bc_l-bf_l+1);
+            eye_3D_pos(1:3,bf_l:bc_l-1) = eye_3D_pos(1:3,max([1,bf_l-1])) + (eye_3D_pos(1:3,bc_l)-eye_3D_pos(1:3,max([1,bf_l-1])))*(1:(bc_l-bf_l))/(bc_l-bf_l+1);
             gap_idx_l(bf_l:bc_l-1) = 0;
         else
             bf_l = bc_l;
@@ -47,7 +47,7 @@ for g_i = 1:length(gap_idx_l)
         end
     else
         if bc_r - bf_r < max_gap_length/1000*srate && gap_idx_r(bf_r) == 1
-            eye_3D_pos(4:6,bf_r:bc_r-1) = eye_3D_pos(4:6,bf_r-1) + (eye_3D_pos(4:6,bc_r)-eye_3D_pos(4:6,bf_r-1))*(1:(bc_r-bf_r))/(bc_r-bf_r+1);
+            eye_3D_pos(4:6,bf_r:bc_r-1) = eye_3D_pos(4:6,max([1,bf_r-1])) + (eye_3D_pos(4:6,bc_r)-eye_3D_pos(4:6,max([1,bf_r-1])))*(1:(bc_r-bf_r))/(bc_r-bf_r+1);
             gap_idx_r(bf_r:bc_r-1) = 0;
         else
             bf_r = bc_r;

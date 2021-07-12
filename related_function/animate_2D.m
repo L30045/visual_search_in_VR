@@ -120,9 +120,9 @@ pause()
 %% animation
 tic
 for i = 2:size(head_loc,2)
-%     if i == 18
-%         pause()
-%     end
+    if ismember(i, [26076:100:26976])
+        pause()
+    end
     % update buffer counters (the counters are operating independently in
     % case we want to modify the tail length separately in the future)
     bh_c = bh_c+1;
@@ -180,6 +180,6 @@ end
 t_end = toc;
 fprintf('playback time length: %.f sec\n',t_end)
 close(gcf)
-close(clip_video)
+% close(clip_video)
 
 end
