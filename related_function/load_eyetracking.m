@@ -1,4 +1,4 @@
-function [data_struct, s_eyeMarker, s_eyeGaze] = load_eyetracking(filename)
+function [data_struct, EEG, s_eyeMarker, s_eyeGaze] = load_eyetracking(filename)
 %% load eye tracking data
 % load head rotation stream
 streams = load_xdf(filename);
@@ -6,6 +6,7 @@ streams = load_xdf(filename);
 %% extract streams
 s_eyeMarker = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeMarker'), streams)};
 s_eyeGaze = streams{cellfun(@(x) strcmp(x.info.name,'ProEyeGaze'), streams)};
+EEG = pop_loadxdf(filename);
 % experiment segment 
 seg_range = s_eyeGaze.segments(1).index_range;
 
