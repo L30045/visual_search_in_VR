@@ -1,0 +1,107 @@
+%% calculate fixation based on threshold and fixation duration
+function fix_idx = cal_fix_general(test_data,srate,thres_fix,varargin)
+%% calculate fixation based on given dispersion/velocity threshold and fixation duration.
+% Input:
+%   [test_data]: 1-channel input data (1 by time)
+%   [srate]: sampling rate
+%   [thres_fix]: test_data higher than this threshold will be marked as
+%   moving.
+% Optional
+%   [max_fix_interval]: merge adjacent fixations if the interval is smaller
+%   than this threshold. (ms) (Default: 75 ms) Disable function by input
+%   NaN.
+%   [max_fix_ang]: merge adjacent fixations if the angle difference is
+%   smaller than this threshold) (0.5 deg ref. Tobii default) (deg) Disable
+%   function by input NaN.
+%   [min_fix_len]: discard fixations if shorter than this threshold. (60 ms
+%   ref. Tobii) (ms) Disable function by input NaN.
+%
+% Output:
+%   fix_idx: fixation index (binary, fixation as 1)
+
+    %% parameter setting
+    p = inputParser;
+    p.KeepUnmatched = true;
+    addRequired(p,'test_data');
+    addRequired(p,'srate');
+    addRequired(p,'thres_fix');
+    addOptional(p,'max_fix_interval',75) % ms (merge adjacent fixations if the interval is smaller than 75 ms)
+    addOptional(p,'max_fix_ang',1) % deg (merge adjacent fixations if the angle difference is smaller than 1 deg) (0.5 deg for tobii default)
+    addOptional(p,'min_fix_len',150) % ms (discard fixations if shorter than 150ms. Tobii uses 60 ms instead)
+    parse(p,test_data,srate,varargin{:})
+    
+    pipe_pars = p.Results;
+    
+    %% calculate fixation
+    disp('Calculate fixation.')
+    fix_idx = test_data < thres_fix;
+    disp('Done.')    
+  
+    %% merge adjacent fixation
+    if ~isnan(pipe_pars.max_fix_ang)
+        disp('Merge adjacent fixation.')
+        max_fix_interval = pipe_pars.max_fix_interval/1000*srate;
+        [fix_idx,v_ang_fix_idx_l,ang_fix_idx_r,v_ang_fix_idx_r] = merge_adj_fix(fix_idx,max_fix_interval,pipe_pars.max_fix_ang);
+        disp('Done.')
+    end
+    
+    %% remove fixation with short period
+    disp('Remove fixation with short period.')
+    min_fix_len = pipe_pars.min_fix_len/1000*srate;
+    [fix_idx,v_ang_fix_idx_l,ang_fix_idx_r,v_ang_fix_idx_r] = rm_short_fix(fix_idx,v_ang_fix_idx_l,ang_fix_idx_r,v_ang_fix_idx_r,min_fix_len);
+    
+    % =====================================
+    fix_struct.eye_fixation.left_ang_fix_idx = fix_idx;
+    fix_struct.eye_fixation.left_v_ang_fix_idx = v_ang_fix_idx_l;
+    fix_struct.eye_fixation.right_ang_fix_idx = ang_fix_idx_r;
+    fix_struct.eye_fixation.right_v_ang_fix_idx = v_ang_fix_idx_r;
+    disp('Done.')
+    
+    %% decide fixation index
+    % select left/right/strictBOTH/looseBOTH to determine how data from
+    % left and right eyes are merge.
+    switch lower(pipe_pars.eye_selection)
+        case 'left'
+            ang_fix_idx = fix_idx;
+            v_ang_fix_idx = v_ang_fix_idx_l;
+        case 'right'
+            ang_fix_idx = ang_fix_idx_r;
+            v_ang_fix_idx = v_ang_fix_idx_r;
+        case 'strictboth'
+            ang_fix_idx = fix_idx & ang_fix_idx_r;
+            v_ang_fix_idx = v_ang_fix_idx_l & v_ang_fix_idx_r;
+        case 'looseboth'
+            ang_fix_idx = fix_idx | ang_fix_idx_r;
+            v_ang_fix_idx = v_ang_fix_idx_l | v_ang_fix_idx_r;
+    end
+    if ~exist('ang_fix_idx','var') || ~exist('v_ang_fix_idx','var')
+        disp('Eye selection not found. Use ''Left'' as default.')
+        pipe_pars.eye_selection = 'Left';
+        ang_fix_idx = fix_idx;
+        v_ang_fix_idx = v_ang_fix_idx_l;
+    end
+    
+    % select velocity/dispersion/strictVD/looseVD to determine how eye
+    % fixation was define.
+    switch lower(pipe_pars.fix_selection)
+        case 'velocity'
+            eye_fix_idx = v_ang_fix_idx;
+        case 'dispersion'
+            eye_fix_idx = ang_fix_idx;
+        case 'strictvd'
+            eye_fix_idx = ang_fix_idx & v_ang_fix_idx;
+        case 'loosevd'
+            eye_fix_idx = ang_fix_idx | v_ang_fix_idx;
+    end
+    if ~exist('eye_fix_idx','var')
+        disp('Fix selection not found. Use ''Velocity'' as default.')
+        pipe_pars.fix_selection = 'Velocity';
+        eye_fix_idx = v_ang_fix_idx;
+    end
+    
+    % =====================================
+    fix_struct.eye_fixation.eye_fix_idx = eye_fix_idx;
+    fix_struct.pipeline_pars = pipe_pars;
+    
+end
+
