@@ -1,15 +1,10 @@
-function new_fix_idx = merge_adj_fix(fix_idx,max_fix_interval,max_fix_ang)
+function fix_idx = merge_adj_fix(fix_idx,max_fix_interval,max_fix_ang)
 
-gap_floor_ang_l = 1; % floor 
-gap_floor_vang_l = 1; 
-gap_floor_ang_r = 1; 
-gap_floor_vang_r = 1; 
+gap_floor = 1; % floor 
+
 for f_i = 1:length(fix_idx)
     gap_ceiling = f_i; % ceiling
-    [gap_floor_ang_l, fix_idx] = merge_fix(f_i, fix_idx, gap_floor_ang_l, gap_ceiling, ang_l, max_fix_interval, max_fix_ang);
-    [gap_floor_vang_l, v_ang_fix_idx_l] = merge_fix(f_i, v_ang_fix_idx_l, gap_floor_vang_l, gap_ceiling, ang_l, max_fix_interval, max_fix_ang);
-    [gap_floor_ang_r, ang_fix_idx_r] = merge_fix(f_i, ang_fix_idx_r, gap_floor_ang_r, gap_ceiling, ang_r, max_fix_interval, max_fix_ang);
-    [gap_floor_vang_r, v_ang_fix_idx_r] = merge_fix(f_i, v_ang_fix_idx_r, gap_floor_vang_r, gap_ceiling, ang_r, max_fix_interval, max_fix_ang);
+    [gap_floor, fix_idx] = merge_fix(f_i, fix_idx, gap_floor, gap_ceiling, ang_l, max_fix_interval, max_fix_ang);
 end
 
 end
