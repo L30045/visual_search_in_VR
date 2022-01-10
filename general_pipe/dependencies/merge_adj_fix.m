@@ -1,10 +1,10 @@
-function fix_idx = merge_adj_fix(fix_idx,max_fix_interval,max_fix_ang)
+function fix_idx = merge_adj_fix(fix_idx,test_data,max_fix_interval,max_fix_ang)
 
 gap_floor = 1; % floor 
 
 for f_i = 1:length(fix_idx)
     gap_ceiling = f_i; % ceiling
-    [gap_floor, fix_idx] = merge_fix(f_i, fix_idx, gap_floor, gap_ceiling, ang_l, max_fix_interval, max_fix_ang);
+    [gap_floor, fix_idx] = merge_fix(f_i, fix_idx, gap_floor, gap_ceiling, test_data, max_fix_interval, max_fix_ang);
 end
 
 end

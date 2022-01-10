@@ -26,7 +26,7 @@ for g_i = 1:length(gap_idx)
         if bc_l - bf_l < max_gap_length/1000*srate && gap_idx(bf_l)
             % fix small gap
             reconst_data(:,bf_l:bc_l-1) = test_data(:,max([1,bf_l-1])) + (test_data(:,bc_l)-test_data(:,max([1,bf_l-1])))*(1:(bc_l-bf_l))/(bc_l-bf_l+1);
-            gap_idx(bf_l:bc_l-1) = False;
+            gap_idx(bf_l:bc_l-1) = false;
         else
             bf_l = bc_l;
         end

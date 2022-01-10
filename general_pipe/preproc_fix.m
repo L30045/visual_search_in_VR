@@ -128,7 +128,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
         case 'speed'
             output_data = speed;
         case 'angle'
-            output_data = angle;
+            output_data = ang;
         case 'v_ang'
             output_data = v_ang;
     end     

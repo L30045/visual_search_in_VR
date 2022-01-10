@@ -28,7 +28,7 @@ function fix_idx = cal_fix_general(test_data,srate,thres_fix,varargin)
     addOptional(p,'max_fix_interval',75) % ms (merge adjacent fixations if the interval is smaller than 75 ms)
     addOptional(p,'max_fix_ang',1) % deg (merge adjacent fixations if the angle difference is smaller than 1 deg) (0.5 deg for tobii default)
     addOptional(p,'min_fix_len',150) % ms (discard fixations if shorter than 150ms. Tobii uses 60 ms instead)
-    parse(p,test_data,srate,varargin{:})
+    parse(p,test_data,srate,thres_fix,varargin{:})
     
     pipe_pars = p.Results;
     
@@ -41,7 +41,7 @@ function fix_idx = cal_fix_general(test_data,srate,thres_fix,varargin)
     if ~isnan(pipe_pars.max_fix_ang)
         disp('Merge adjacent fixation.')
         max_fix_interval = pipe_pars.max_fix_interval/1000*srate;
-        fix_idx = merge_adj_fix(fix_idx,max_fix_interval,pipe_pars.max_fix_ang);
+        fix_idx = merge_adj_fix(fix_idx,test_data,max_fix_interval,pipe_pars.max_fix_ang);
         disp('Done.')
     end
     
