@@ -12,7 +12,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
 %     [noise_reduction]: moving average puipl location with +/- n samples
 %     [max_gap_length]: max gap length to be filled in, otherwise treat as
 %       losing data.(ms)
-%     [outputType]: dispersion, speed, angle, v_ang (Default: angle)
+%     [outputType]: dispersion, speed, angle, v_ang (Default: angle (rad))
 %     [velocity_smooth_win_len]: calculate dispersion/angle and
 %       speed/angular speed based on a sliding window if given, the window
 %       without enough time points will not be calculated. ie. the beginning
@@ -51,7 +51,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
     %% extract data from parse
     if isempty(pipe_pars.conf_idx)
         disp('Eye openess index not found in test data. Assume eyes always open.')
-        conf_idx = True(1,size(test_data,2));
+        conf_idx = true(1,size(test_data,2));
     else
         conf_idx = pipe_pars.conf_idx;
     end
@@ -107,7 +107,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
     
     %% calculate angle and angular speed
     disp('Cacluate angle and angular speed.')
-	[ang, v_ang] = cal_ang(mv_test_data,srate,pipe_pars.velocity_smooth_win_len);
+	[ang, v_ang] = cal_ang(mv_test_data,srate,pipe_pars.velocity_smooth_win_len); % rad
     % =====================================
     preproc_struct.dispersion.ang = ang;
     preproc_struct.dispersion.v_ang = v_ang;
