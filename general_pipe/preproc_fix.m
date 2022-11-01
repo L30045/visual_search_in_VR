@@ -12,7 +12,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
 %     [noise_reduction]: moving average puipl location with +/- n samples
 %     [max_gap_length]: max gap length to be filled in, otherwise treat as
 %       losing data.(ms)
-%     [outputType]: dispersion, speed, angle, v_ang (Default: angle (rad))
+%     [outputType]: dispersion, speed, angle, v_ang (Default: angle (degree))
 %     [velocity_smooth_win_len]: calculate dispersion/angle and
 %       speed/angular speed based on a sliding window if given, the window
 %       without enough time points will not be calculated. ie. the beginning
@@ -107,7 +107,7 @@ function [output_data, preproc_struct] = preproc_fix(test_data,srate,varargin)
     
     %% calculate angle and angular speed
     disp('Cacluate angle and angular speed.')
-	[ang, v_ang] = cal_ang(mv_test_data,srate,pipe_pars.velocity_smooth_win_len); % rad
+	[ang, v_ang] = cal_ang(mv_test_data,srate,pipe_pars.velocity_smooth_win_len); % deg
     % =====================================
     preproc_struct.dispersion.ang = ang;
     preproc_struct.dispersion.v_ang = v_ang;
